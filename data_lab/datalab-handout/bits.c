@@ -267,7 +267,12 @@ int isPositive(int x) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+  int sign_x = (x >> 31) & 1;
+  int sign_y = (y >> 31) & 1;
+  int z = y + (~x + 1);
+  // ~z的符号位
+  int sign_z = !(z >> 31);
+  return (!(sign_x ^ sign_y) & sign_z) | ((sign_x ^ sign_y) & sign_x);
 }
 /*
  * ilog2 - return floor(log base 2 of x), where x > 0
@@ -277,7 +282,22 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4
  */
 int ilog2(int x) {
-  return 2;
+  int s, s1, s2, s3, s4, s5;
+  s = !!(x>>16);
+  s1 = s << 4;
+  x >>= s1;
+  s = !!(x>>8);
+  s2 = s << 3;
+  x >>= s2;
+  s = !!(x>>4);
+  s3 = s << 2;
+  x >>= s3;
+  s = !!(x>>2);
+  s4 = s << 1;
+  x >>= s4;
+  s = !!(x>>1);
+  s5 = s;
+  return s1 + s2 + s3 + s4 + s5;
 }
 /*
  * float_neg - Return bit-level equivalent of expression -f for
@@ -291,7 +311,13 @@ int ilog2(int x) {
  *   Rating: 2
  */
 unsigned float_neg(unsigned uf) {
- return 2;
+  int nan = 0x000000FF << 23;
+  int frac = 0x7FFFFF & uf;
+  if((nan & uf) == nan && frac)
+  {
+    return uf;
+  }
+  return uf ^ (1 << 31);
 }
 /*
  * float_i2f - Return bit-level equivalent of expression (float) x
@@ -303,7 +329,25 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  return 2;
+  int e = 158;
+  int mask = 1 << 31;
+  int sign = x & mask;
+  int frac;
+  if(x == mask)
+    return mask | (158 << 23);
+  if(!x)
+    return 0;
+  if(sign)
+    x = ~x + 1;
+  while(!(x & mask))
+  {
+    x = x << 1;
+    e -= 1;
+  }
+  frac = (x&(~mask)) >> 8;
+  if(x & 0x80 && ((x & 0x7F) > 0 || frac & 1))
+    frac += 1;
+  return sign + (e << 23) + frac;
 }
 /*
  * float_twice - Return bit-level equivalent of expression 2*f for
@@ -317,5 +361,21 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-  return 2;
+  unsigned s = uf & (1 << 31);
+  int exp = (uf >> 23) & 0xff;
+  int frac = uf & ((1 << 23) -1);
+  if((exp ^ 0xff))
+  {
+    if(!exp)
+    {
+      frac <<= 1;
+    }
+    else
+    {
+      exp ++;
+      if(exp == 255)
+        frac = 0;
+    }
+  }
+  return s | (exp << 23) | frac;
 }
