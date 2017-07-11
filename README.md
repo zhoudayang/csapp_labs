@@ -4,6 +4,4 @@
 
 > [实验资源](http://csapp.cs.cmu.edu/3e/labs.html)
 
-## 状态
 
-1. data lab (doing)
